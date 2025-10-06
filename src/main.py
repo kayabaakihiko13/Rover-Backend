@@ -10,3 +10,8 @@ app = FastAPI(title="Rover Backend Developer")
 Base.metadata.create_all(bind=engine)
 
 app.include_router(users_router)
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
