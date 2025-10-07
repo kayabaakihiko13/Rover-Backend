@@ -1,3 +1,4 @@
+import uuid
 from utils import (
     STATUS_CREATED_OR_OK,
     STATUS_OK,
@@ -11,21 +12,21 @@ from utils import (
 def test_register_user(test_client):
     # Hapus dulu user yang sama supaya test bisa dijalankan berulang
     test_client.delete("/users/delete-by-username?username=asep")
-
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
     response = test_client.post(
         "/users/register",
         json={
             "firstname": "acep",
             "lastname": "Surocop",
             "username": "asep",
-            "email": "asep123@example.com",
+            "email": unique_email,
             "password": "rahasia123"
         }
     )
     assert response.status_code in STATUS_CREATED_OR_OK, f"Unexpected status: {response.text}"
     data = response.json()
     assert data["username"] == "asep"
-    assert data["email"] == "asep123@example.com"
+    assert data["email"] == unique_email
 
 def test_login_user(test_client):
     response = test_client.post(
