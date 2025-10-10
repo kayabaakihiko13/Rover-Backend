@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    model_config = SettingsConfigDict(env_file=".env")
+    MODEL_PATH:str
+    LABEL_PATH:str
+
+    model_config = SettingsConfigDict(env_file=".env.local")
 
 settings = Settings()
