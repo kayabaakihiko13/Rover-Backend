@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from src.core.db import Base,engine
 from src.users.routers import router as users_router
 from src.posts.routers import router as posts_router
+
 app = FastAPI()
 
 
