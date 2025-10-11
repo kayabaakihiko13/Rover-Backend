@@ -1,0 +1,34 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env.local
+
+# Testing & development
+tests/
+pytest.ini
+.flake8
+.coverage
+htmlcov/
+
+# VSCode / IDE files
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Public assets (karena sudah di-mount sebagai volume)
+public/*
+uploads/*
+weights/*
+
+# Misc
+*.log
+*.tmp
+*.DS_Store
