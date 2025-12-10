@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 from datetime import datetime, timezone
 from starlette.requests import Request
+from typing import List
 
 import uuid
 import shutil
@@ -14,6 +15,7 @@ from src.core.auth import get_current_user
 from src.core.config import settings
 from src.yolo_detector.V11 import Yolov11Detector
 from src.posts._utils import _read_yaml_file
+from src.posts.models import Post
 
 # Constants
 UPLOAD_DIR = Path("uploads")
@@ -80,6 +82,26 @@ async def upload_and_predict(
         "image_url": str(file_path),
         "result": result_predict
     })
+
+@router.get('/history',status_code=status.HTTP_200_OK)
+async def get_histroy(
+    db:Session = Depends(get_db),
+    current_user = Depends(get_current_user)):
+    posts = (db.query(Post).filter(Post.user_id == current_user.user_id)
+             .order_by(Post.create_at.desc())
+             .all()
+            )
+    history_by_user_all = []
+    for post in posts:
+        history_by_user_all.append({
+            "post_id": post.post_id,
+            "image_url": post.image_url,
+            "create_at": post.create_at.isoformat(),  # agar JSON-serializable
+            "result": post.result or {}
+        })
+    
+    return JSONResponse(history_by_user_all)
+
 
 # --- SIMPAN EDIT (YANG BENAR-BENAR SIMPAN KE DB) ---
 @router.post("/simpan-edit")
