@@ -1,26 +1,23 @@
-from fastapi import APIRouter,status,Depends,HTTPException,UploadFile,File
+from fastapi import APIRouter, status, Depends, HTTPException, UploadFile, File
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
-from datetime import datetime
-from collections import Counter,defaultdict
-
+from datetime import datetime, timezone
+from starlette.requests import Request
+from typing import List
 
 import uuid
 import shutil
 import cv2
 
-
 from src.core.db import get_db
 from src.core.auth import get_current_user
 from src.core.config import settings
-from src.posts.schemas import PostResponse
-from src.users.models import User
-from src.posts.models import Post
 from src.yolo_detector.V11 import Yolov11Detector
 from src.posts._utils import _read_yaml_file
+from src.posts.models import Post
 
-
-# for coonstant value 
+# Constants
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
@@ -33,18 +30,18 @@ router = APIRouter(
     tags=["Posts"]
 )
 
-detector = Yolov11Detector(model_path=settings.MODEL_PATH,
-                           label_yaml=settings.LABEL_PATH)
+detector = Yolov11Detector(
+    model_path=settings.MODEL_PATH,
+    label_yaml=settings.LABEL_PATH
+)
 
-
-# this for create post
-@router.post("/",response_model=PostResponse,status_code=status.HTTP_201_CREATED)
+# --- UPLOAD & PREDICT (TIDAK SIMPAN KE DB) ---
+@router.post("/", status_code=status.HTTP_200_OK)
 async def upload_and_predict(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user)  # tetap butuh auth, tapi tidak butuh db
 ):
-    # Cek ekstensi file
+    # Validasi ekstensi
     file_ext = file.filename.split(".")[-1].lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -56,45 +53,100 @@ async def upload_and_predict(
     file_path = UPLOAD_DIR / f"{uuid.uuid4()}.{file_ext}"
     with file_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    # jalankan model
+
+    # Deteksi
     img = cv2.imread(str(file_path))
-    boxes,scores,class_ids = detector.detect(img)
-    # hasil prediction ke dalam json file
+    boxes, scores, class_ids = detector.detect(img)
+
+    # Format hasil
     if not boxes:
         result_predict = {"predict": {}, "confidence": {}, "bbox": {}}
     else:
         predict_summary = {}
         predict_confidence = {}
         predict_bbox = {}
-        for box,score,cls_id in zip(boxes,scores,class_ids):
-            # class name
+        for box, score, cls_id in zip(boxes, scores, class_ids):
             cls_name = CLASS_NAMES[cls_id] if cls_id < len(CLASS_NAMES) else f"class_{cls_id}"
-            # Tambahkan count
             predict_summary[cls_name] = predict_summary.get(cls_name, 0) + 1
-
-            # Tambahkan confidence
             predict_confidence.setdefault(cls_name, []).append(round(float(score), 4))
-
-            # Tambahkan bbox
             predict_bbox.setdefault(cls_name, []).append([int(x) for x in box])
 
-        result_predict ={
-            "predict":predict_summary,
-            "confidence":predict_confidence,
-            "bbox":predict_bbox
+        result_predict = {
+            "predict": predict_summary,
+            "confidence": predict_confidence,
+            "bbox": predict_bbox
         }
 
-    # Simpan record post di DB
-    db_post = Post(
+    # ✅ Hanya kembalikan data, TIDAK SIMPAN KE DATABASE
+    return JSONResponse({
+        "image_url": str(file_path),
+        "result": result_predict
+    })
+
+@router.get('/history',status_code=status.HTTP_200_OK)
+async def get_histroy(
+    db:Session = Depends(get_db),
+    current_user = Depends(get_current_user)):
+    posts = (db.query(Post).filter(Post.user_id == current_user.user_id)
+             .order_by(Post.create_at.desc())
+             .all()
+            )
+    history_by_user_all = []
+    for post in posts:
+        history_by_user_all.append({
+            "post_id": post.post_id,
+            "image_url": post.image_url,
+            "create_at": post.create_at.isoformat(),  # agar JSON-serializable
+            "result": post.result or {}
+        })
+    
+    return JSONResponse(history_by_user_all)
+
+
+# --- SIMPAN EDIT (YANG BENAR-BENAR SIMPAN KE DB) ---
+@router.post("/simpan-edit")
+async def simpan_edit(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    form_data = await request.form()
+
+    image_path = form_data.get("image_path")
+    if not image_path:
+        raise HTTPException(status_code=400, detail="image_path tidak ditemukan")
+
+    semua_benar = form_data.get("semua_benar")
+
+    # Ekstrak data dinamis
+    class_labels = []
+    counters = []
+    i = 1
+    while True:
+        label = form_data.get(f"class_label_{i}")
+        counter_str = form_data.get(f"counter_{i}")
+        if label is None or counter_str is None:
+            break
+        try:
+            counter = int(counter_str)
+        except (ValueError, TypeError):
+            counter = 1
+        class_labels.append(label)
+        counters.append(counter)
+        i += 1
+
+    # Simpan ke DB (hanya di sini!)
+    from src.posts.models import Post  # pastikan diimpor
+    new_post = Post(
         post_id=str(uuid.uuid4()),
         user_id=current_user.user_id,
-        image_url=str(file_path),
-        result = result_predict,
-        create_at = datetime.now()
+        image_url=image_path,
+        result={"labels": class_labels, "counters": counters},  # atau format predict jika diinginkan
+        create_at=datetime.now(timezone.utc),
+        update_at=datetime.now(timezone.utc)
     )
-
-    db.add(db_post)
+    db.add(new_post)
     db.commit()
-    db.refresh(db_post)
-
-    return db_post
+    print(f"💾 Post berhasil disimpan: {new_post.post_id}")
+    
+    return {"message": "Berhasil disimpan"}

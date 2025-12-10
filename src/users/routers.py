@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 
-# import dari module kamu
+# import local  module
 from src.users.models import User
 from src.users.schemas import (
     UserRegister, UserResponse, TokenResponse,
@@ -100,12 +100,6 @@ async def login(
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
-
-
-# ========== GET CURRENT USER INFO ==========
-@router.get("/me", response_model=UserResponse)
-async def read_me(current_user: User = Depends(_get_current_user)):
-    return current_user
 
 
 # ========== FORGOT PASSWORD ==========
