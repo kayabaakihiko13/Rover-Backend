@@ -26,6 +26,7 @@ Base.metadata.create_all(bind=engine)
 # app.add_middleware(SlowAPIMiddleware)
 
 # CORS Middleware
+print("CORS ORIGIN:", settings.CORS_FE_DEV)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.CORS_FE_DEV],
