@@ -26,7 +26,7 @@ htmlcov/
 # Public assets (karena sudah di-mount sebagai volume)
 public/*
 uploads/*
-weights/*
+
 
 # Misc
 *.log
