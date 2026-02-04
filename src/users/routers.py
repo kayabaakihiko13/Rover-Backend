@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from fastapi import (
     APIRouter, Depends, HTTPException, status
 )
@@ -106,7 +106,6 @@ async def login(
 @router.post("/forgot-password")
 async def forgot_password(request: ForgetPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == request.username).first()
-
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -114,10 +113,9 @@ async def forgot_password(request: ForgetPasswordRequest, db: Session = Depends(
         data={"sub": str(user.user_id), "reset": True},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-
-    reset_link = f"http://localhost:8000/users/reset-password?token={reset_token}"
+    
+    reset_link = f"{settings.CORS_FE_DEV}/reset-password?token={reset_token}"
     print("Send this link to user via email:", reset_link)
-
     return {
         "message": "Password reset link generated successfully",
         "reset_link": reset_link,
@@ -128,11 +126,7 @@ async def forgot_password(request: ForgetPasswordRequest, db: Session = Depends(
 @router.post("/reset-password")
 async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
     try:
-        payload = jwt.decode(
-            request.token,
-            settings.SECRET_KEY_JWT,
-            algorithms=[settings.ALGORITHM]
-        )
+        payload = jwt.decode(request.token, settings.SECRET_KEY_JWT, algorithms=[settings.ALGORITHM])
         user_id = payload.get("sub")
         if not payload.get("reset"):
             raise HTTPException(status_code=400, detail="Invalid token type")
@@ -147,12 +141,10 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Passwords do not match")
 
     if verify_password(request.new_password, user.password):
-        raise HTTPException(
-            status_code=400,
-            detail="New password cannot be the same as the old one"
-        )
+        raise HTTPException(status_code=400, detail="New password cannot be the same as the old one")
 
     user.password = hash_password(request.new_password)
     db.commit()
 
     return {"message": "Password reset successful"}
+

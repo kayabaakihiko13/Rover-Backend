@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy semua source code
 COPY . .
-
+ENV PYTHONPATH=/app
+ENV ENV=prod
 # Expose port FastAPI
 EXPOSE 8000
 
