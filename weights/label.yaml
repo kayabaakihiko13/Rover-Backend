@@ -1,0 +1,9 @@
+nc: 6
+names: ['Matang', 'abnormal', 'kosong', 'mentah', 'setangah_matang', 'terlalu_matang']
+
+roboflow:
+  workspace: kayabaakihiko
+  project: data-skripsi-baru-duffz
+  version: 4
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/kayabaakihiko/data-skripsi-baru-duffz/dataset/4
