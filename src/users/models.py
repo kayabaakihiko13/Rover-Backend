@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, TIMESTAMP, text
 from sqlalchemy.orm import relationship
 import uuid
-from src.core.auth import Base
+from src.core.db import Base
 
 class User(Base):
     __tablename__ = "user"

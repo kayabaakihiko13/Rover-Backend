@@ -1,25 +1,12 @@
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base,Session
+from sqlalchemy.orm import Session
 from fastapi import Depends,HTTPException,status
 from jose import jwt,JWTError
 from passlib.context import CryptContext
-
+from src.core.db import get_db
 from src.users.models import User
 from src.core.config import settings
-
-
-engine = create_engine(settings.DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
@@ -42,7 +29,6 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY_JWT, algorithm=settings.ALGORITHM)
-
 # ======== GET CURRENT USER (DECODE JWT) ==========
 
 def get_current_user(token: str = Depends(oauth2_scheme),

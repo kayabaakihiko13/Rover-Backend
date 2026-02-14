@@ -12,7 +12,7 @@ from src.users.schemas import (
     UserRegister, UserResponse, TokenResponse,
     ForgetPasswordRequest, ResetPasswordRequest
 )
-from src.core.auth import get_db
+from src.core.db import get_db
 from src.core.auth import (
     oauth2_scheme, hash_password, verify_password,
     create_access_token
@@ -24,6 +24,32 @@ router = APIRouter(
     prefix="/users",
     tags=["Users"]
 )
+
+
+# ======== GET CURRENT USER (DECODE JWT) ==========
+def _get_current_user(token: str = Depends(oauth2_scheme),
+                      db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY_JWT,
+            algorithms=[settings.ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = db.query(User).filter(User.user_id == str(user_id)).first()
+    if not user:
+        raise credentials_exception
+    return user
 
 
 # ========== REGISTER USER ==========
