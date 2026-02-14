@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, ForeignKey, TIMESTAMP, text,JSON,func
 from sqlalchemy.orm import relationship
 import uuid
-from src.core.auth import Base
+from src.core.db import Base
 
 class Post(Base):
     __tablename__ = "post"

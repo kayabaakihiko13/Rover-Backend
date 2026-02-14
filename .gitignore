@@ -85,7 +85,7 @@ Thumbs.db
 # Profiling data
 .prof
 
-# node module
-node_modules
+
 # uploads folder
 uploads
+weights
