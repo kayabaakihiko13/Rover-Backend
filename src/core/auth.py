@@ -54,3 +54,15 @@ def get_current_user(token: str = Depends(oauth2_scheme),
     if not user:
         raise credentials_exception
     return user
+
+def create_reset_token(email: str):
+    expire = datetime.utcnow() + timedelta(minutes=15)
+
+    payload = {
+        "sub": email,
+        "exp": expire,
+        "type": "reset"
+    }
+
+    return jwt.encode(payload, settings.SECRET_KEY_JWT,
+                      algorithm=settings.ALGORITHM)

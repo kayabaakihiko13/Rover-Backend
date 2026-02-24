@@ -1,6 +1,5 @@
-from pydantic import BaseModel,ConfigDict
-from datetime import datetime
-from typing import Optional,Any
+from pydantic import BaseModel,ConfigDict,EmailStr
+
 
 # User Schemas
 class UserRegister(BaseModel):
@@ -30,6 +29,9 @@ class TokenResponse(BaseModel):
 
 class ForgetPasswordRequest(BaseModel):
     username: str
+
+class ForgotPasswordSchema(BaseModel):
+    email:EmailStr
 
 class ResetPasswordRequest(BaseModel):
     token:str
