@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import  timedelta
 from fastapi import (
     APIRouter, Depends, HTTPException, status
 )
@@ -19,7 +19,7 @@ from src.core.auth import (
 )
 
 from src.core.config import settings
-from src.core.email import send_reset_email
+from src.core.auth import send_reset_email
 
 router = APIRouter(
     prefix="/users",
