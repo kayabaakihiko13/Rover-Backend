@@ -14,42 +14,17 @@ from src.users.schemas import (
 )
 from src.core.db import get_db
 from src.core.auth import (
-    oauth2_scheme, hash_password, verify_password,
+    hash_password, verify_password,
     create_access_token
 )
-from src.core.config import settings
 
+from src.core.config import settings
+from src.core.email import send_reset_email
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
 )
-
-
-# ======== GET CURRENT USER (DECODE JWT) ==========
-def _get_current_user(token: str = Depends(oauth2_scheme),
-                      db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY_JWT,
-            algorithms=[settings.ALGORITHM]
-        )
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    user = db.query(User).filter(User.user_id == str(user_id)).first()
-    if not user:
-        raise credentials_exception
-    return user
 
 
 # ========== REGISTER USER ==========
@@ -114,7 +89,8 @@ async def forgot_password(request: ForgetPasswordRequest, db: Session = Depends(
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     
-    reset_link = f"{settings.CORS_FE_DEV}/reset-password?token={reset_token}"
+    reset_link = f"{settings.CORS_FE_DEV.rstrip('/')}/reset-password?token={reset_token}"
+    await send_reset_email(user.email, reset_link)
     print("Send this link to user via email:", reset_link)
     return {
         "message": "Password reset link generated successfully",
