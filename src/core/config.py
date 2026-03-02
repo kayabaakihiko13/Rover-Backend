@@ -3,13 +3,17 @@ from dotenv import load_dotenv
 from fastapi_mail import ConnectionConfig
 import os
 
-ENV = os.getenv("ENV","local")
+ENV = os.getenv("ENV", "local")
 env_file = ".env.local" if ENV == "local" else ".env"
 
 load_dotenv(env_file)
 
+
 class Settings(BaseSettings):
-    DATABASE_URL: str
+    DB_USER: str
+    DB_PASSWORD: str
+    DB_PORT: str
+    DB_NAME: str
     SECRET_KEY_JWT: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
@@ -28,21 +32,21 @@ class Settings(BaseSettings):
     MAIL_STARTTLS: bool
     MAIL_SSL_TLS: bool
 
-    model_config = SettingsConfigDict(
-        env_file=env_file,
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=env_file, extra="ignore")
+
 
 settings = Settings()
 
-conf = ConnectionConfig(
-    MAIL_USERNAME=settings.MAIL_USERNAME,
-    MAIL_PASSWORD=settings.MAIL_PASSWORD,
-    MAIL_FROM=settings.MAIL_FROM,
-    MAIL_PORT=settings.MAIL_PORT,
-    MAIL_SERVER=settings.MAIL_SERVER,
-    MAIL_FROM_NAME=settings.MAIL_FROM_NAME,
-    MAIL_STARTTLS=settings.MAIL_STARTTLS,
-    MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
-    USE_CREDENTIALS=True
-)
+
+def get_email_conf() -> ConnectionConfig:
+    return ConnectionConfig(
+        MAIL_USERNAME=settings.MAIL_USERNAME,
+        MAIL_PASSWORD=settings.MAIL_PASSWORD,
+        MAIL_FROM=settings.MAIL_FROM,
+        MAIL_PORT=settings.MAIL_PORT,
+        MAIL_SERVER=settings.MAIL_SERVER,
+        MAIL_FROM_NAME=settings.MAIL_FROM_NAME,
+        MAIL_STARTTLS=settings.MAIL_STARTTLS,
+        MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
+        USE_CREDENTIALS=True,
+    )

@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta
-from pydantic import EmailStr
 from fastapi.security import OAuth2PasswordBearer
-from fastapi_mail import FastMail, MessageSchema
 from sqlalchemy.orm import Session
-from fastapi import Depends,HTTPException,status
-from jose import jwt,JWTError
+from fastapi import Depends, HTTPException, status
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 from src.core.db import get_db
 from src.users.models import User
-from src.core.config import settings,conf
+from src.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
@@ -30,15 +28,19 @@ def verify_password(plain_pw: str, hashed_pw: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.utcnow() + (
+        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY_JWT, algorithm=settings.ALGORITHM)
 
 
 # ======== GET CURRENT USER (DECODE JWT) ==========
 
-def get_current_user(token: str = Depends(oauth2_scheme),
-                      db: Session = Depends(get_db)):
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired credentials",
@@ -46,9 +48,7 @@ def get_current_user(token: str = Depends(oauth2_scheme),
     )
     try:
         payload = jwt.decode(
-            token,
-            settings.SECRET_KEY_JWT,
-            algorithms=[settings.ALGORITHM]
+            token, settings.SECRET_KEY_JWT, algorithms=[settings.ALGORITHM]
         )
         user_id: str = payload.get("sub")
         if user_id is None:
@@ -60,23 +60,3 @@ def get_current_user(token: str = Depends(oauth2_scheme),
     if not user:
         raise credentials_exception
     return user
-
-def send_reset_email(email: EmailStr, reset_link: str):
-
-    message = MessageSchema(
-        subject="Reset Password - Rover App",
-        recipients=[email],
-        body=f"""
-        Halo,
-
-        Klik link berikut untuk reset password:
-
-        {reset_link}
-
-        Link berlaku selama 15 menit.
-        """,
-        subtype="plain",
-    )
-
-    fm = FastMail(conf)
-    fm.send_message(message)

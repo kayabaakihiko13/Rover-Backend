@@ -25,28 +25,25 @@ ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
 CLASS_NAMES = _read_yaml_file(str(settings.LABEL_PATH))
 
-router = APIRouter(
-    prefix="/posts",
-    tags=["Posts"]
-)
+router = APIRouter(prefix="/posts", tags=["Posts"])
 
 detector = Yolov11Detector(
-    model_path=settings.MODEL_PATH,
-    label_yaml=settings.LABEL_PATH
+    model_path=settings.MODEL_PATH, label_yaml=settings.LABEL_PATH
 )
+
 
 # --- UPLOAD & PREDICT (TIDAK SIMPAN KE DB) ---
 @router.post("/", status_code=status.HTTP_200_OK)
 async def upload_and_predict(
     file: UploadFile = File(...),
-    current_user=Depends(get_current_user)  # tetap butuh auth, tapi tidak butuh db
+    current_user=Depends(get_current_user),  # tetap butuh auth, tapi tidak butuh db
 ):
     # Validasi ekstensi
     file_ext = file.filename.split(".")[-1].lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type '{file_ext}' not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=f"File type '{file_ext}' not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
     # Simpan file
@@ -66,7 +63,9 @@ async def upload_and_predict(
         predict_confidence = {}
         predict_bbox = {}
         for box, score, cls_id in zip(boxes, scores, class_ids):
-            cls_name = CLASS_NAMES[cls_id] if cls_id < len(CLASS_NAMES) else f"class_{cls_id}"
+            cls_name = (
+                CLASS_NAMES[cls_id] if cls_id < len(CLASS_NAMES) else f"class_{cls_id}"
+            )
             predict_summary[cls_name] = predict_summary.get(cls_name, 0) + 1
             predict_confidence.setdefault(cls_name, []).append(round(float(score), 4))
             predict_bbox.setdefault(cls_name, []).append([int(x) for x in box])
@@ -74,32 +73,34 @@ async def upload_and_predict(
         result_predict = {
             "predict": predict_summary,
             "confidence": predict_confidence,
-            "bbox": predict_bbox
+            "bbox": predict_bbox,
         }
 
     # ✅ Hanya kembalikan data, TIDAK SIMPAN KE DATABASE
-    return JSONResponse({
-        "image_url": str(file_path),
-        "result": result_predict
-    })
+    return JSONResponse({"image_url": str(file_path), "result": result_predict})
 
-@router.get('/history',status_code=status.HTTP_200_OK)
+
+@router.get("/history", status_code=status.HTTP_200_OK)
 async def get_histroy(
-    db:Session = Depends(get_db),
-    current_user = Depends(get_current_user)):
-    posts = (db.query(Post).filter(Post.user_id == current_user.user_id)
-             .order_by(Post.create_at.desc())
-             .all()
-            )
+    db: Session = Depends(get_db), current_user=Depends(get_current_user)
+):
+    posts = (
+        db.query(Post)
+        .filter(Post.user_id == current_user.user_id)
+        .order_by(Post.create_at.desc())
+        .all()
+    )
     history_by_user_all = []
     for post in posts:
-        history_by_user_all.append({
-            "post_id": post.post_id,
-            "image_url": post.image_url,
-            "create_at": post.create_at.isoformat(),  # agar JSON-serializable
-            "result": post.result or {}
-        })
-    
+        history_by_user_all.append(
+            {
+                "post_id": post.post_id,
+                "image_url": post.image_url,
+                "create_at": post.create_at.isoformat(),  # agar JSON-serializable
+                "result": post.result or {},
+            }
+        )
+
     return JSONResponse(history_by_user_all)
 
 
@@ -108,7 +109,7 @@ async def get_histroy(
 async def simpan_edit(
     request: Request,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     form_data = await request.form()
 
@@ -137,16 +138,19 @@ async def simpan_edit(
 
     # Simpan ke DB (hanya di sini!)
     from src.posts.models import Post  # pastikan diimpor
+
     new_post = Post(
         post_id=str(uuid.uuid4()),
         user_id=current_user.user_id,
         image_url=image_path,
-        result={"labels": class_labels, "counters": counters},  # atau format predict jika diinginkan
+        result={
+            "labels": class_labels,
+            "counters": counters,
+        },  # atau format predict jika diinginkan
         create_at=datetime.now(timezone.utc),
-        update_at=datetime.now(timezone.utc)
+        update_at=datetime.now(timezone.utc),
     )
     db.add(new_post)
     db.commit()
-    print(f"💾 Post berhasil disimpan: {new_post.post_id}")
-    
+
     return {"message": "Berhasil disimpan"}
