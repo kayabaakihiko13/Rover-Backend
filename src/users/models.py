@@ -1,7 +1,8 @@
-from sqlalchemy import Column, String, TIMESTAMP, text
+from sqlalchemy import Column, String, TIMESTAMP, text, Boolean
 from sqlalchemy.orm import relationship
 import uuid
 from src.core.db import Base
+
 
 class User(Base):
     __tablename__ = "user"
@@ -12,11 +13,15 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(50), unique=True, nullable=False)
     password = Column(String, nullable=False)
-    create_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
+    role = Column(String, default="user")
+    is_active = Column(Boolean, default=True)
+    create_at = Column(
+        TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP")
+    )
     update_at = Column(
         TIMESTAMP(timezone=True),
         server_default=text("CURRENT_TIMESTAMP"),
-        onupdate=text("CURRENT_TIMESTAMP")
+        onupdate=text("CURRENT_TIMESTAMP"),
     )
 
     # Relasi ke Post

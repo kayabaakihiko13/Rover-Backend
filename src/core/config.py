@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     MODEL_PATH: str
     LABEL_PATH: str
 
+    # ADMIN CONFIG
+    SUPERADMIN_EMAIL: str
+    SUPERADMIN_USERNAME: str
+    SUPERADMIN_PASSWORD: str 
+
     # EMAIL CONFIG
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
