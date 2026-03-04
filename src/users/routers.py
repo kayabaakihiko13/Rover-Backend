@@ -1,7 +1,5 @@
-from datetime import datetime, timedelta
-from fastapi import (
-    APIRouter, Depends, HTTPException, status
-)
+from datetime import timedelta
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
@@ -9,22 +7,19 @@ from jose import jwt, JWTError
 # import local  module
 from src.users.models import User
 from src.users.schemas import (
-    UserRegister, UserResponse, TokenResponse,
-    ForgetPasswordRequest, ResetPasswordRequest
+    UserRegister,
+    UserResponse,
+    TokenResponse,
+    ForgetPasswordRequest,
+    ResetPasswordRequest,
 )
 from src.core.db import get_db
-from src.core.auth import (
-    hash_password, verify_password,
-    create_access_token
-)
+from src.core.auth import hash_password, verify_password, create_access_token
 
 from src.core.config import settings
-from src.core.email import send_reset_email
+from src.core.email_service import send_reset_email
 
-router = APIRouter(
-    prefix="/users",
-    tags=["Users"]
-)
+router = APIRouter(prefix="/users", tags=["Users"])
 
 
 # ========== REGISTER USER ==========
@@ -57,8 +52,7 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)):
 # ========== LOGIN USER ==========
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(User.username == form_data.username).first()
 
@@ -79,7 +73,9 @@ async def login(
 
 # ========== FORGOT PASSWORD ==========
 @router.post("/forgot-password")
-async def forgot_password(request: ForgetPasswordRequest, db: Session = Depends(get_db)):
+async def forgot_password(
+    request: ForgetPasswordRequest, db: Session = Depends(get_db)
+):
     user = db.query(User).filter(User.username == request.username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -88,10 +84,11 @@ async def forgot_password(request: ForgetPasswordRequest, db: Session = Depends(
         data={"sub": str(user.user_id), "reset": True},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-    
-    reset_link = f"{settings.CORS_FE_DEV.rstrip('/')}/reset-password?token={reset_token}"
+
+    reset_link = (
+        f"{settings.CORS_FE_DEV.rstrip('/')}/reset-password?token={reset_token}"
+    )
     await send_reset_email(user.email, reset_link)
-    print("Send this link to user via email:", reset_link)
     return {
         "message": "Password reset link generated successfully",
         "reset_link": reset_link,
@@ -102,7 +99,9 @@ async def forgot_password(request: ForgetPasswordRequest, db: Session = Depends(
 @router.post("/reset-password")
 async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
     try:
-        payload = jwt.decode(request.token, settings.SECRET_KEY_JWT, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            request.token, settings.SECRET_KEY_JWT, algorithms=[settings.ALGORITHM]
+        )
         user_id = payload.get("sub")
         if not payload.get("reset"):
             raise HTTPException(status_code=400, detail="Invalid token type")
@@ -117,10 +116,11 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Passwords do not match")
 
     if verify_password(request.new_password, user.password):
-        raise HTTPException(status_code=400, detail="New password cannot be the same as the old one")
+        raise HTTPException(
+            status_code=400, detail="New password cannot be the same as the old one"
+        )
 
     user.password = hash_password(request.new_password)
     db.commit()
 
     return {"message": "Password reset successful"}
-
