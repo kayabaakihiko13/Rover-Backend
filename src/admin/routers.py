@@ -25,6 +25,10 @@ from src.admin.schemas import (
     DashboardStats,
     AnalyticsResponse,
     GrowthData,
+    HarvestInList,
+    DashboardAnalytics,
+    CategoryCount,
+    UserEarnings,
 )
 from src.users.models import User
 from src.posts.models import Post
@@ -107,7 +111,14 @@ async def get_dashboard(
 ):
     total_users = db.query(User).count()
     total_posts = db.query(Post).count()
-    total_news = db.query(News).count()
+
+    total_harvests = 0
+    posts = db.query(Post).all()
+    for post in posts:
+        if post.result and "counters" in post.result:
+            for count in post.result.get("counters", []):
+                total_harvests += count
+
     active_users = (
         db.query(User).filter(User.is_active == True).count()
         if hasattr(User, "is_active")
@@ -122,7 +133,7 @@ async def get_dashboard(
     return DashboardStats(
         total_users=total_users,
         total_posts=total_posts,
-        total_news=total_news,
+        total_harvests=total_harvests,
         active_users=active_users,
         banned_users=banned_users,
     )
@@ -153,38 +164,67 @@ async def get_analytics(
         .all()
     )
 
-    post_growth_data = (
-        db.query(
-            func.date(Post.create_at).label("date"),
-            func.count(Post.post_id).label("count"),
-        )
-        .filter(Post.create_at >= start_date)
-        .group_by(func.date(Post.create_at))
-        .all()
-    )
-
-    news_growth_data = (
-        db.query(
-            func.date(News.create_at).label("date"),
-            func.count(News.news_id).label("count"),
-        )
-        .filter(News.create_at >= start_date)
-        .group_by(func.date(News.create_at))
-        .all()
-    )
-
     user_growth = [
-        GrowthData(date=str(row.date), count=row.count) for row in user_growth_data
+        GrowthData(date=str(row.date), count=int(row.count)) for row in user_growth_data
     ]
-    post_growth = [
-        GrowthData(date=str(row.date), count=row.count) for row in post_growth_data
-    ]
-    news_growth = [
-        GrowthData(date=str(row.date), count=row.count) for row in news_growth_data
-    ]
+
+    posts = db.query(Post).all()
+
+    category_map = {
+        "matang": {"name": "Matang", "count": 0, "price": 5000},
+        "abnormal": {"name": "Abnormal", "count": 0, "price": 0},
+        "kosong": {"name": "Kosong", "count": 0, "price": 0},
+        "mentah": {"name": "Mentah", "count": 0, "price": 2000},
+        "setangah_matang": {"name": "Setengah Matang", "count": 0, "price": 3000},
+        "terlalu_matang": {"name": "Terlalu Matang", "count": 0, "price": 1000},
+    }
+
+    user_earnings_map = {}
+
+    for post in posts:
+        if post.result and "labels" in post.result and "counters" in post.result:
+            labels = post.result.get("labels", [])
+            counters = post.result.get("counters", [])
+            for label, counter in zip(labels, counters):
+                label_lower = label.lower().strip()
+                if label_lower in category_map:
+                    category_map[label_lower]["count"] += counter
+                    earnings = counter * category_map[label_lower]["price"]
+                    if post.user_id not in user_earnings_map:
+                        user_earnings_map[post.user_id] = 0
+                    user_earnings_map[post.user_id] += earnings
+
+    categories = []
+    total_earnings = 0
+    for key, data in category_map.items():
+        total = data["count"] * data["price"]
+        total_earnings += total
+        categories.append(
+            CategoryCount(
+                name=data["name"],
+                count=data["count"],
+                price=data["price"],
+                total=total,
+            )
+        )
+
+    users = db.query(User).all()
+    user_earnings = []
+    for user in users:
+        earnings = user_earnings_map.get(user.user_id, 0)
+        user_earnings.append(
+            UserEarnings(
+                user_id=user.user_id,
+                username=user.username,
+                total_earnings=earnings,
+            )
+        )
 
     return AnalyticsResponse(
-        user_growth=user_growth, post_growth=post_growth, news_growth=news_growth
+        user_growth=user_growth,
+        categories=categories,
+        total_earnings=total_earnings,
+        user_earnings=user_earnings,
     )
 
 
@@ -243,3 +283,65 @@ async def delete_user(
         db.delete(user)
         db.commit()
         return {"message": "User has been deleted"}
+
+
+# ========== LIST ALL HARVESTS (Superadmin/Moderator) ==========
+@router.get(
+    "/harvests",
+    response_model=list[HarvestInList],
+    dependencies=[
+        Depends(admin_require_role([RoleEnum.SUPERADMIN, RoleEnum.MODERATOR]))
+    ],
+)
+async def list_harvests(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    posts = (
+        db.query(Post, User)
+        .join(User, Post.user_id == User.user_id)
+        .order_by(Post.create_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    result = []
+    for post, user in posts:
+        result.append(
+            HarvestInList(
+                post_id=post.post_id,
+                user_id=post.user_id,
+                username=user.username,
+                firstname=user.firstname,
+                lastname=user.lastname,
+                image_url=post.image_url,
+                result=post.result,
+                create_at=post.create_at,
+            )
+        )
+
+    return result
+
+
+# ========== DELETE POST (Superadmin/Moderator) ==========
+@router.delete(
+    "/posts/{post_id}",
+    dependencies=[
+        Depends(admin_require_role([RoleEnum.SUPERADMIN, RoleEnum.MODERATOR]))
+    ],
+)
+async def delete_post(
+    post_id: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    post = db.query(Post).filter(Post.post_id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    db.delete(post)
+    db.commit()
+    return {"message": "Post has been deleted"}

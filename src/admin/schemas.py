@@ -12,7 +12,7 @@ class AdminCreate(BaseModel):
     email: EmailStr
     username: str
     password: str
-    role: str  # superadmin, moderator
+    role: str
 
 
 class AdminResponse(BaseModel):
@@ -70,7 +70,7 @@ class UserDetail(BaseModel):
 class DashboardStats(BaseModel):
     total_users: int
     total_posts: int
-    total_news: int
+    total_harvests: int
     active_users: int
     banned_users: int
 
@@ -80,7 +80,45 @@ class GrowthData(BaseModel):
     count: int
 
 
+class CategoryCount(BaseModel):
+    name: str
+    count: int
+    price: int
+    total: int
+
+
+class UserEarnings(BaseModel):
+    user_id: str
+    username: str
+    total_earnings: int
+
+
 class AnalyticsResponse(BaseModel):
     user_growth: list[GrowthData]
-    post_growth: list[GrowthData]
-    news_growth: list[GrowthData]
+    categories: list[CategoryCount]
+    total_earnings: int
+    user_earnings: list[UserEarnings]
+
+
+class HarvestInList(BaseModel):
+    post_id: str
+    user_id: str
+    username: str
+    firstname: str
+    lastname: str
+    image_url: str
+    result: Optional[dict] = None
+    create_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DashboardAnalytics(BaseModel):
+    user_growth: list[GrowthData]
+    total_users: int
+    total_posts: int
+    total_harvests: int
+    total_earnings: int
+    categories: list[CategoryCount]
+    user_earnings: list[UserEarnings]
