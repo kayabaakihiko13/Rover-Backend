@@ -40,9 +40,10 @@ async def seed_superadmin():
 
 
 # CORS Middleware
+cors_origins = [origin.strip() for origin in settings.CORS_FE_DEV.split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.CORS_FE_DEV],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
