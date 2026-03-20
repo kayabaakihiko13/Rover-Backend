@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy semua source code
 COPY . .
+# COPY .env .env  # Hapus ini - env vars passed via docker-compose atau -e
 ENV PYTHONPATH=/app
 ENV ENV=prod
 # Expose port FastAPI
