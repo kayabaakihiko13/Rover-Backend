@@ -1,13 +1,12 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from dotenv import load_dotenv
 from fastapi_mail import ConnectionConfig
 import os
 
+# configuration .env file and main.py in root folder
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV = os.getenv("ENV", "local")
-env_file = ".env.local" if ENV == "local" else ".env"
-
-load_dotenv(env_file)
-
+env_file_path = PROJECT_ROOT / (".env.dev" if ENV == "local" else ".env")
 
 class Settings(BaseSettings):
     DB_USER: str
@@ -38,11 +37,13 @@ class Settings(BaseSettings):
     MAIL_STARTTLS: bool
     MAIL_SSL_TLS: bool
 
-    model_config = SettingsConfigDict(env_file=env_file, extra="ignore")
-
+    model_config = SettingsConfigDict(
+        env_file=env_file_path,
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 settings = Settings()
-
 
 def get_email_conf() -> ConnectionConfig:
     return ConnectionConfig(
