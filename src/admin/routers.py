@@ -38,7 +38,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # ========== ADMIN LOGIN ==========
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 async def admin_login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
