@@ -103,6 +103,48 @@ async def get_histroy(
 
     return JSONResponse(history_by_user_all)
 
+# router for delete post
+@router.delete("/{post_id}", status_code=status.HTTP_200_OK)
+async def delete_post(
+    post_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Hapus post dari history berdasarkan post_id.
+    Hanya user pemilik post yang bisa menghapus.
+    """
+    # Cari post dengan validasi user_id
+    post = (
+        db.query(Post)
+        .filter(Post.post_id == post_id, Post.user_id == current_user.user_id)
+        .first()
+    )
+    
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post tidak ditemukan atau bukan milik Anda",
+        )
+    
+    # Opsional: Hapus file gambar dari storage
+    try:
+        image_path = Path(post.image_url)
+        # Hanya hapus jika file ada dan berada di folder uploads
+        if image_path.exists() and str(image_path).startswith("uploads"):
+            image_path.unlink()
+    except Exception as e:
+        print(f"Gagal menghapus file gambar: {e}")
+    
+    # Hapus dari database
+    db.delete(post)
+    db.commit()
+    
+    return JSONResponse({
+        "message": "Post berhasil dihapus",
+        "post_id": post_id
+    })
+
 
 # --- SIMPAN EDIT (YANG BENAR-BENAR SIMPAN KE DB) ---
 @router.post("/simpan-edit")
