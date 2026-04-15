@@ -52,17 +52,28 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)):
 # ========== LOGIN USER ==========
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    db: Session = Depends(get_db)
 ):
+    # 1. Cek apakah usernya ada
     user = db.query(User).filter(User.username == form_data.username).first()
-
-    if not user or not verify_password(form_data.password, user.password):
+    
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Username tidak terdaftar",
         )
 
+    # 2. Cek apakah passwordnya benar
+    is_password_correct = verify_password(form_data.password, user.password)
+    if not is_password_correct:
+        print(f"DEBUG: Password untuk user '{form_data.username}' salah!")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Password salah",
+        )
+
+    # 3. Buat token jika semua lolos
     access_token = create_access_token(
         data={"sub": str(user.user_id)},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
