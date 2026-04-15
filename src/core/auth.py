@@ -11,8 +11,8 @@ from src.core.config import settings
 from src.core.roles import RoleEnum
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
-admin_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login",scheme_name="UserAuth")
+admin_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/login",scheme_name="AdminAuth")
 
 
 def hash_password(password: str) -> str:
