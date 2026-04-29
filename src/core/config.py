@@ -1,4 +1,5 @@
 from pathlib import Path
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from fastapi_mail import ConnectionConfig
 import os
@@ -38,7 +39,10 @@ class Settings(BaseSettings):
     MAIL_SSL_TLS: bool
 
     # file object env
-    UPLOAD_DIR:str
+    UPLOAD_DIR: str = Field(
+        default="/app/uploads", 
+        validation_alias="UPLOAD_DIR"
+    )
 
     model_config = SettingsConfigDict(
         env_file=env_file_path,

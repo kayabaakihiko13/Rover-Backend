@@ -19,7 +19,7 @@ from src.posts.models import Post
 
 # Constants
 UPLOAD_DIR = Path(settings.UPLOAD_DIR)
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(exist_ok=True,parents=True)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
