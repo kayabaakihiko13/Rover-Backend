@@ -77,7 +77,7 @@ async def upload_and_predict(
         }
 
     # ✅ Hanya kembalikan data, TIDAK SIMPAN KE DATABASE
-    return JSONResponse({"image_url": str(file_path), "result": result_predict})
+    return JSONResponse({"image_url": f"/uploads/{file_path.name}", "result": result_predict})
 
 
 @router.get("/history", status_code=status.HTTP_200_OK)
