@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
 
 from src.core.db import Base, engine, get_db
 from src.core.config import settings
@@ -18,7 +20,8 @@ app = FastAPI(title="Rover Backend Developer", version="0.0.1")
 
 # initial database
 Base.metadata.create_all(bind=engine)
-
+Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # Seed Superadmin on startup
 @app.on_event("startup")
@@ -54,7 +57,6 @@ app.include_router(users_router)
 app.include_router(posts_router)
 app.include_router(admin_router)
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/health")
