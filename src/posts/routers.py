@@ -18,7 +18,7 @@ from src.posts._utils import _read_yaml_file
 from src.posts.models import Post
 
 # Constants
-UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}

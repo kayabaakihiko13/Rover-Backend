@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     MAIL_STARTTLS: bool
     MAIL_SSL_TLS: bool
 
+    # file object env
+    UPLOAD_DIR:str
+
     model_config = SettingsConfigDict(
         env_file=env_file_path,
         env_file_encoding="utf-8",
