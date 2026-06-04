@@ -97,7 +97,7 @@ async def forgot_password(
     )
 
     reset_link = (
-        f"{settings.CORS_FE_DEV.rstrip('/')}/reset-password?token={reset_token}"
+        f"{settings.CORS_FE_ORIGINS.rstrip('/')}/reset-password?token={reset_token}"
     )
     await send_reset_email(user.email, reset_link)
     return {
