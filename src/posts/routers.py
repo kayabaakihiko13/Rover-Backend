@@ -96,7 +96,7 @@ async def get_histroy(
             {
                 "post_id": post.post_id,
                 "image_url": post.image_url,
-                "create_at": post.create_at.isoformat(),  # agar JSON-serializable
+                "create_at": post.create_at.isoformat(),  # membaca format JSON-serializable
                 "result": post.result or {},
             }
         )

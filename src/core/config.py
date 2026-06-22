@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     SECRET_KEY_JWT: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    FORGOT_PASSWORD_TOKEN_EXPIRE_MINUTE:int
     CORS_FE_ORIGINS: str
 
     MODEL_PATH: str
