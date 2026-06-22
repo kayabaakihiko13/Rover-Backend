@@ -93,7 +93,7 @@ async def forgot_password(
 
     reset_token = create_access_token(
         data={"sub": str(user.user_id), "reset": True},
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=timedelta(minutes=settings.FORGOT_PASSWORD_TOKEN_EXPIRE_MINUTE),
     )
 
     reset_link = (
